@@ -90,20 +90,16 @@ export default class Linter {
     }
 
     this.collection.delete(document.uri);
-    if (exitCode === 0) {
-      return;
-    }
 
-    if (exitCode === 1 && stderr.length > 0) {
-      console.error(stderr);
-      return;
+    if (stdout && stdout.trim().length > 0) {
+      this.collection.set(document.uri, this.parse(stdout, document));
+    } else if (exitCode !== 0 && stderr) {
+      console.error(`[Haml Lint]: ${stderr}`);
     }
-
-    this.collection.set(document.uri, this.parse(stdout, document));
   }
 
   private parse(output: string, document: TextDocument): Diagnostic[] {
-    if (!output) {
+    if (!output || output.trim().length === 0) {
       return [];
     }
 
@@ -111,15 +107,15 @@ export default class Linter {
     try {
       json = JSON.parse(output);
     } catch (e) {
-      console.error(e);
+      console.error(`[Haml Lint]: Failed to parse JSON output: ${e}`);
       return [];
     }
 
-    if (json.files.length < 1) {
+    if (!json.files || json.files.length < 1) {
       return [];
     }
 
-    return json.files[0].offenses.map(offence => {
+    return (json.files[0].offenses || []).map(offence => {
       const line = Math.max(offence.location.line - 1, 0);
       const lineText = document.lineAt(line);
       const lineTextRange = lineText.range;
