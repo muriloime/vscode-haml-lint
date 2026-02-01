@@ -45,7 +45,10 @@ export default class Linter {
       return;
     }
 
-    this.lint(document);
+    this.lint(document).catch(error => {
+      console.log("[Haml Lint]: An error occurred while linting the document.");
+      console.error(error);
+    });
   }
 
   public clear(document: TextDocument) {
@@ -100,7 +103,18 @@ export default class Linter {
   }
 
   private parse(output: string, document: TextDocument): Diagnostic[] {
-    const json = JSON.parse(output) as { files: File[] };
+    if (!output) {
+      return [];
+    }
+
+    let json: { files: File[] };
+    try {
+      json = JSON.parse(output);
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+
     if (json.files.length < 1) {
       return [];
     }
